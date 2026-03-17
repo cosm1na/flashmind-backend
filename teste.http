@@ -1,0 +1,17 @@
+### Testează Crearea de Cont (Register)
+POST http://localhost:8080/register
+Content-Type: application/json
+
+{
+  "email": "cosmina@test.com",
+  "parola": "parolamea123"
+}
+
+### Testează Login-ul
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+  "email": "cosmina@test.com",
+  "parola": "parolamea123"
+}
