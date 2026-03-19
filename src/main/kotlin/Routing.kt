@@ -10,6 +10,8 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.ResultRow
 
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq //pentru erori de eq
+
 @Serializable
 data class AuthRequest(
     val email: String,
@@ -31,7 +33,7 @@ fun Application.configureRouting() {
                     it[parola] = userDinAndroid.parola
                 }
             }
-            call.respondText("Cont creat cu succes și salvat în baza de date!")
+            call.respondText("Cont creat cu succes si salvat în baza de date!")
         }
 
         post("/login") {
@@ -42,14 +44,14 @@ fun Application.configureRouting() {
             }
 
             if (userGasit == null) {
-                call.respond(HttpStatusCode.Unauthorized, LoginResponse(false, "Eroare: Contul nu există!"))
+                call.respond(HttpStatusCode.Unauthorized, LoginResponse(false, "Eroare: Contul nu exista!"))
             } else {
                 val parolaReala = userGasit[TabelUseri.parola]
                 if (parolaReala == userDinAndroid.parola) {
                     val idUtilizator = userGasit[TabelUseri.id]
                     call.respond(HttpStatusCode.OK, LoginResponse(true, "Te-ai logat cu succes!", idUtilizator))
                 } else {
-                    call.respond(HttpStatusCode.Unauthorized, LoginResponse(false, "Eroare: Parola este greșită!"))
+                    call.respond(HttpStatusCode.Unauthorized, LoginResponse(false, "Eroare: Parola este gresita!"))
                 }
             }
         }
@@ -70,7 +72,7 @@ fun Application.configureRouting() {
         get("/decks/{userId}") {
             val idUser = call.parameters["userId"]?.toIntOrNull()
             if (idUser == null) {
-                call.respond(HttpStatusCode.BadRequest, "ID-ul utilizatorului lipsește sau e invalid!")
+                call.respond(HttpStatusCode.BadRequest, "ID-ul utilizatorului lipseste sau e invalid!")
                 return@get
             }
 
@@ -118,6 +120,66 @@ fun Application.configureRouting() {
                 }
             }
             call.respond(HttpStatusCode.OK, listaCards)
+        }
+
+        delete("/decks/{id}") {
+            val idDeck = call.parameters["id"]?.toIntOrNull()
+            if (idDeck == null) {
+                call.respond(HttpStatusCode.BadRequest, "ID invalid!")
+                return@delete
+            }
+
+            transaction {
+                TabelCards.deleteWhere { TabelCards.deckId eq idDeck }
+                TabelDecks.deleteWhere { TabelDecks.id eq idDeck }
+            }
+            call.respond(HttpStatusCode.OK, "Deck sters cu succes!")
+        }
+
+        put("/decks/{id}") {
+            val idDeck = call.parameters["id"]?.toIntOrNull()
+            if (idDeck == null) {
+                call.respond(HttpStatusCode.BadRequest, "ID invalid!")
+                return@put
+            }
+            val deckPrimit = call.receive<Deck>()
+            transaction {
+                TabelDecks.update({ TabelDecks.id eq idDeck }) {
+                    it[titlu] = deckPrimit.titlu
+                }
+            }
+            call.respond(HttpStatusCode.OK, "Deck actualizat!")
+        }
+
+        delete("/cards/{id}") {
+            val idCard = call.parameters["id"]?.toIntOrNull()
+            if (idCard == null) {
+                call.respond(HttpStatusCode.BadRequest, "ID invalid!")
+                return@delete
+            }
+
+            transaction {
+                TabelCards.deleteWhere { TabelCards.id eq idCard }
+            }
+            call.respond(HttpStatusCode.OK, "Cartonaș șters cu succes!")
+        }
+
+        put("/cards/{id}") {
+            val idCard = call.parameters["id"]?.toIntOrNull()
+            if (idCard == null) {
+                call.respond(HttpStatusCode.BadRequest, "ID invalid!")
+                return@put
+            }
+
+            val cardActualizat = call.receive<Card>()
+
+            transaction {
+                TabelCards.update({ TabelCards.id eq idCard }) {
+                    it[fata] = cardActualizat.fata
+                    it[spate] = cardActualizat.spate
+                }
+            }
+            call.respond(HttpStatusCode.OK, "Cartonaș actualizat cu succes!")
         }
     }
 }
