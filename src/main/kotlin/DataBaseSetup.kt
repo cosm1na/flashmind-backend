@@ -7,6 +7,10 @@ object TabelUseri : Table("users") {
     val id = integer("id").autoIncrement()
     val email = varchar("email", 128).uniqueIndex()
     val parola = varchar("parola", 128)
+
+    val username = varchar("username", 128).nullable()
+    val pozaProfil = text("poza_profil").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -22,6 +26,10 @@ object TabelCards : Table("cards") {
     val fata = text("fata")
     val spate = text("spate")
     val deckId = integer("deck_id").references(TabelDecks.id, onDelete = ReferenceOption.CASCADE)
+
+    val cutie = integer("cutie").default(1)
+    val dataViitoare = long("data_viitoare").default(System.currentTimeMillis())
+
     override val primaryKey = PrimaryKey(id)
 }
 

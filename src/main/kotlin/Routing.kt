@@ -9,8 +9,7 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.ResultRow
-
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq //pentru erori de eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
 @Serializable
 data class AuthRequest(
@@ -49,11 +48,35 @@ fun Application.configureRouting() {
                 val parolaReala = userGasit[TabelUseri.parola]
                 if (parolaReala == userDinAndroid.parola) {
                     val idUtilizator = userGasit[TabelUseri.id]
-                    call.respond(HttpStatusCode.OK, LoginResponse(true, "Te-ai logat cu succes!", idUtilizator))
+                    val userNume = userGasit[TabelUseri.username]
+                    val userPoza = userGasit[TabelUseri.pozaProfil]
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        LoginResponse(true, "Te-ai logat cu succes!", idUtilizator, userNume, userPoza)
+                    )
                 } else {
                     call.respond(HttpStatusCode.Unauthorized, LoginResponse(false, "Eroare: Parola este gresita!"))
                 }
             }
+        }
+
+        put("/users/{id}") {
+            val idUser = call.parameters["id"]?.toIntOrNull()
+            if (idUser == null) {
+                call.respond(HttpStatusCode.BadRequest, "ID utilizator invalid!")
+                return@put
+            }
+
+            val profilNou = call.receive<UpdateProfileRequest>()
+
+            transaction {
+                TabelUseri.update({ TabelUseri.id eq idUser }) {
+                    it[username] = profilNou.username
+                    it[pozaProfil] = profilNou.pozaProfil
+                }
+            }
+            call.respond(HttpStatusCode.OK, "Profil actualizat cu succes!")
         }
 
         post("/decks") {
@@ -96,9 +119,18 @@ fun Application.configureRouting() {
                     it[fata] = cardPrimit.fata
                     it[spate] = cardPrimit.spate
                     it[deckId] = cardPrimit.deckId
+                    it[cutie] = cardPrimit.cutie
+                    it[dataViitoare] = cardPrimit.dataViitoare
                 } get TabelCards.id
             }
-            val cardSalvat = Card(idNouGenerat, cardPrimit.deckId, cardPrimit.fata, cardPrimit.spate)
+            val cardSalvat = Card(
+                idNouGenerat,
+                cardPrimit.deckId,
+                cardPrimit.fata,
+                cardPrimit.spate,
+                cardPrimit.cutie,
+                cardPrimit.dataViitoare
+            )
             call.respond(HttpStatusCode.Created, cardSalvat)
         }
 
@@ -115,7 +147,9 @@ fun Application.configureRouting() {
                         id = rand[TabelCards.id],
                         deckId = rand[TabelCards.deckId],
                         fata = rand[TabelCards.fata],
-                        spate = rand[TabelCards.spate]
+                        spate = rand[TabelCards.spate],
+                        cutie = rand[TabelCards.cutie],
+                        dataViitoare = rand[TabelCards.dataViitoare]
                     )
                 }
             }
@@ -177,6 +211,8 @@ fun Application.configureRouting() {
                 TabelCards.update({ TabelCards.id eq idCard }) {
                     it[fata] = cardActualizat.fata
                     it[spate] = cardActualizat.spate
+                    it[cutie] = cardActualizat.cutie
+                    it[dataViitoare] = cardActualizat.dataViitoare
                 }
             }
             call.respond(HttpStatusCode.OK, "Cartonaș actualizat cu succes!")
