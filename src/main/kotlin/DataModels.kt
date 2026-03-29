@@ -33,3 +33,21 @@ data class UpdateProfileRequest(
     val username: String,
     val pozaProfil: String
 )
+
+    @Serializable
+data class GeminiPart(val text: String)
+
+@Serializable
+data class GeminiContent(val parts: List<GeminiPart>)
+
+@Serializable
+data class GeminiRequest(val contents: List<GeminiContent>)
+
+@Serializable
+data class GeminiResponse(val candidates: List<GeminiCandidate>? = null)
+
+@Serializable
+data class GeminiCandidate(val content: GeminiContent)
+
+@Serializable
+data class AiFlashcard(val fata: String, val spate: String)

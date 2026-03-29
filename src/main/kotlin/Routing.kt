@@ -10,6 +10,10 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.http.content.streamProvider
+import io.ktor.server.request.receiveMultipart
 
 @Serializable
 data class AuthRequest(
@@ -216,6 +220,52 @@ fun Application.configureRouting() {
                 }
             }
             call.respond(HttpStatusCode.OK, "Cartonaș actualizat cu succes!")
+        }
+        post("/upload-pdf") {
+            val multipart = call.receiveMultipart()
+            var pdfText = ""
+            var deckName = "Pachet PDF" // Nume default
+            var userId = 1 // ID-ul userului tău de test
+
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "deckName") deckName = part.value
+                        if (part.name == "userId") userId = part.value.toIntOrNull() ?: 1
+                    }
+                    is PartData.FileItem -> {
+                        val fileBytes = part.streamProvider().readBytes()
+                        pdfText = AiService.extractTextFromPdf(fileBytes.inputStream())
+                    }
+                    else -> {}
+                }
+                part.dispose()
+            }
+
+            if (pdfText.isNotBlank()) {
+                val generatedCards = AiService.generateFlashcards(pdfText)
+
+                org.jetbrains.exposed.sql.transactions.transaction {
+                    // 1. Creăm pachetul (deck-ul) nou și îi luăm ID-ul automat
+                    val noulDeckId = com.example.TabelDecks.insert {
+                        it[titlu] = deckName
+                        it[this.userId] = userId
+                    } get com.example.TabelDecks.id
+
+                    // 2. Salvăm cartonașele folosind noul ID
+                    generatedCards.forEach { card ->
+                        com.example.TabelCards.insert {
+                            it[fata] = card.fata
+                            it[spate] = card.spate
+                            it[deckId] = noulDeckId
+                        }
+                    }
+                }
+
+                call.respond(HttpStatusCode.OK, "Am generat ${generatedCards.size} cartonașe!")
+            } else {
+                call.respond(HttpStatusCode.BadRequest, "Nu am putut citi textul din PDF")
+            }
         }
     }
 }
