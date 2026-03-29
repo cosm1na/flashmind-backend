@@ -1,21 +1,32 @@
 package com.example
 
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.text.PDFTextStripper
+import java.io.File
 import java.io.InputStream
-import io.ktor.client.statement.*
+import java.util.Properties
 
 object AiService {
-    private const val API_KEY = "AIzaSyASnQpki3VXHoKzMZVP6UHbWrVOHeuoKd4"
-    private const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$API_KEY"
+
+    private val API_KEY: String = run {
+        val properties = Properties()
+        val file = File("local.properties")
+        if (file.exists()) {
+            file.inputStream().use { properties.load(it) }
+        }
+        properties.getProperty("GEMINI_API_KEY")
+            ?: throw IllegalStateException("Eroare CRITICA: Nu am gasit GEMINI_API_KEY in fisierul local.properties!")
+    }
+
+    private val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$API_KEY"
 
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
